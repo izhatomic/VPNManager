@@ -85,7 +85,8 @@ class Ui_MainWindow(object):
         self.label_ssh_status = QtWidgets.QLabel(self.tab_main)
         self.label_ssh_status.setText("Не подключен!")
         self.label_ssh_status.setObjectName("label_ssh_status")
-        self.label_ssh_status.setStyleSheet('background: rgb(255, 255, 255); color: rgb(200, 0, 0);')
+        # self.label_ssh_status.setStyleSheet('background: rgb(255, 255, 255); color: rgb(200, 0, 0);')
+        self.label_ssh_status.setStyleSheet('color: rgb(200, 0, 0);')
         self.horizontalLayout_2.addWidget(self.label_ssh_status)
 
         # Кнопка: Соединиться

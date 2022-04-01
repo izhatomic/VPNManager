@@ -3,6 +3,8 @@ import os.path
 import time
 from typing import Dict
 
+import datetime
+
 import paramiko
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QFileDialog
@@ -57,19 +59,6 @@ class GuiForVPNBot(QtWidgets.QMainWindow, Ui_MainWindow):
         else:
             handler_install = False
 
-        vpnbot_check = self.server.shell(cmd='if [[ -e /lib/systemd/system/vpnbot.service ]]; then echo "OK"; fi')
-        if vpnbot_check.strip() == "OK":
-            vpnbot_install = True
-        else:
-            vpnbot_install = False
-
-        vpnbot_start_check = self.server.shell(
-            cmd='sleep 5 ; if [[ ! -z $(service vpnbot status | grep -w active) ]]; then echo "OK"; fi')
-        if vpnbot_start_check.strip() == "OK":
-            vpnbot_start = True
-        else:
-            vpnbot_start = False
-
         openvpn_check = self.server.shell(cmd='if [[ ! -z $(which openvpn) ]]; then echo "OK"; fi')
         if openvpn_check.strip() == "OK":
             openvpn_install = True
@@ -96,8 +85,6 @@ class GuiForVPNBot(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.server_status = {
             "handler": handler_install,
-            "vpnbot": vpnbot_install,
-            "bot_start": vpnbot_start,
             "openvpn": openvpn_install,
             "wireguard": wireguard_install,
             "shadowsocks": shadowsocks_install,
@@ -112,31 +99,12 @@ class GuiForVPNBot(QtWidgets.QMainWindow, Ui_MainWindow):
         if data is None:
             data = self.server_status
 
-        if data["handler"] and data["vpnbot"]:
-            self.label_install_bot.setText("Бот установлен")
-            # self.label_install_bot.setStyleSheet('background: rgb(255, 255, 255); color: rgb(0, 200, 0);')
-            self.label_install_bot.setStyleSheet('color: rgb(0, 200, 0);')
-        elif data["handler"] and not data["vpnbot"]:
-            self.label_install_bot.setText("Бот не установлен")
-            self.label_install_bot.setStyleSheet('color: rgb(255, 0, 0);')
-            self.display("main", text="Бот не установлен!\n")
-        elif not data["handler"] and data["vpnbot"]:
-            self.label_install_bot.setText("Бот не установлен")
-            self.label_install_bot.setStyleSheet('color: rgb(255, 0, 0);')
-            self.display("main", text="Оркестратор VPN не установлен!\n")
+        if data["handler"]:
+            self.label_install_manager.setText("Установлен")
+            self.label_install_manager.setStyleSheet('color: rgb(0, 200, 0);')
         else:
-            self.label_install_bot.setText("Бот не установлен")
-            self.label_install_bot.setStyleSheet('color: rgb(255, 0, 0);')
-            self.display("main", text="Оркестратор VPN и бот не установлен!\n")
-
-        if data["bot_start"]:
-            self.label_start_bot.setText("Запущен")
-            self.label_start_bot.setStyleSheet('color: rgb(0, 200, 0);')
-            self.btn_start_bot.setText("Остановить")
-        else:
-            self.label_start_bot.setText("Остановлен")
-            self.label_start_bot.setStyleSheet('color: rgb(255, 0, 0);')
-            self.btn_start_bot.setText("Запустить")
+            self.label_install_manager.setText("Не установлен")
+            self.label_install_manager.setStyleSheet('color: rgb(255, 0, 0);')
 
         if data["openvpn"]:
             self.label_openvpn.setText("Установлен")
@@ -166,218 +134,10 @@ class GuiForVPNBot(QtWidgets.QMainWindow, Ui_MainWindow):
             self.label_socks.setText("Не установлен")
             self.label_socks.setStyleSheet('color: rgb(255, 0, 0);')
 
-    def get_env_data(self):
-        if self.server is None or not self.server.established:
-            self.label_settings_status.setText("Соединение с сервером не установлено!")
-            self.label_settings_status.setStyleSheet('color: rgb(255, 0, 0);')
-            self.env_data = {}
-            return self.env_data
-
-        check = self.server.shell(cmd=f"if [[ -e /root/{bot_name}/.env ]]; then echo 'OK'; fi")
-        if check.strip() != "OK":
-            self.label_settings_status.setText("Бот не установлен на сервере!")
-            self.label_settings_status.setStyleSheet('color: rgb(255, 0, 0);')
-            self.env_data = {}
-            return self.env_data
-
-        bot_token = self.server.shell(cmd=f"cat /root/{bot_name}/.env | grep bot_token")
-        if bot_token != "":
-            self.env_data["bot_token"] = bot_token.split('=')[-1]
-
-        bot_admin = self.server.shell(cmd=f"cat /root/{bot_name}/.env | grep bot_admin")
-        if bot_admin != "":
-            self.env_data["bot_admin"] = bot_admin.split('=')[-1]
-
-        price_1_day = self.server.shell(cmd=f"cat /root/{bot_name}/.env | grep price_1_day")
-        self.env_data["price_1_day"] = price_1_day.split('=')[-1]
-
-        price_3_day = self.server.shell(cmd=f"cat /root/{bot_name}/.env | grep price_3_day")
-        self.env_data["price_3_day"] = price_3_day.split('=')[-1]
-
-        price_7_day = self.server.shell(cmd=f"cat /root/{bot_name}/.env | grep price_7_day")
-        self.env_data["price_7_day"] = price_7_day.split('=')[-1]
-
-        price_30_day = self.server.shell(cmd=f"cat /root/{bot_name}/.env | grep price_30_day")
-        self.env_data["price_30_day"] = price_30_day.split('=')[-1]
-
-        price_180_day = self.server.shell(cmd=f"cat /root/{bot_name}/.env | grep price_180_day")
-        self.env_data["price_180_day"] = price_180_day.split('=')[-1]
-
-        price_365_day = self.server.shell(cmd=f"cat /root/{bot_name}/.env | grep price_365_day")
-        self.env_data["price_365_day"] = price_365_day.split('=')[-1]
-
-        qiwi_number = self.server.shell(cmd=f"cat /root/{bot_name}/.env | grep qiwi_number")
-        self.env_data["qiwi_number"] = qiwi_number.split('=')[-1]
-
-        qiwi_token = self.server.shell(cmd=f"cat /root/{bot_name}/.env | grep qiwi_token")
-        self.env_data["qiwi_token"] = qiwi_token.split('=')[-1]
-
-        qiwi_pub = self.server.shell(cmd=f"cat /root/{bot_name}/.env | grep qiwi_pub")
-        self.env_data["qiwi_pub"] = qiwi_pub.split('=')[-1]
-
-        yoomoney_token = self.server.shell(cmd=f"cat /root/{bot_name}/.env | grep yoomoney_token")
-        self.env_data["yoomoney_token"] = yoomoney_token.split('=')[-1]
-
-        API_KEY = self.server.shell(cmd=f"cat /root/{bot_name}/.env | grep fk_api_key")
-        self.env_data["fk_api_key"] = API_KEY.split('=')[-1]
-
-        FK_secret = self.server.shell(cmd=f"cat /root/{bot_name}/.env | grep fk_secret")
-        self.env_data["fk_secret"] = FK_secret[10:]
-
-        SHOP_ID = self.server.shell(cmd=f"cat /root/{bot_name}/.env | grep fk_shop_id")
-        self.env_data["fk_shop_id"] = SHOP_ID.split('=')[-1]
-
-        return self.env_data
-
-    def set_env_data(self):
-        self.env_data = {}
-        self.get_env_data()
-
-        if self.env_data == {}:
-            self.display("main", text="Ошибка чтения параметров бота!")
-            self.label_settings_status.setStyleSheet('color: rgb(255, 0, 0);')
-            return 1
-
-        err = None
-        try:
-            self.form_bot_token.setText(self.env_data["bot_token"].strip())
-        except Exception as er:
-            self.display("main", text="Ошибка считывания bot_token")
-            err = True
-
-        try:
-            self.form_bot_admin.setText(self.env_data["bot_admin"].strip())
-        except Exception as er:
-            self.display("main", text="Ошибка считывания bot_admin")
-            err = True
-
-        try:
-            self.form_1_day_price.setText(self.env_data["price_1_day"].strip())
-        except Exception as er:
-            self.display("main", text="Ошибка считывания price_1_day")
-            err = True
-
-        try:
-            self.form_3_day_price.setText(self.env_data["price_3_day"].strip())
-        except Exception as er:
-            self.display("main", text="Ошибка считывания price_3_day")
-            err = True
-
-        try:
-            self.form_7_day_price.setText(self.env_data["price_7_day"].strip())
-        except Exception as er:
-            self.display("main", text="Ошибка считывания price_7_day")
-            err = True
-
-        try:
-            self.form_30_day_price.setText(self.env_data["price_30_day"].strip())
-        except Exception as er:
-            self.display("main", text="Ошибка считывания price_30_day")
-            err = True
-
-        try:
-            self.form_180_day_price.setText(self.env_data["price_180_day"].strip())
-        except Exception as er:
-            self.display("main", text="Ошибка считывания price_180_day")
-            err = True
-
-        try:
-            self.form_365_day_price.setText(self.env_data["price_365_day"].strip())
-        except Exception as er:
-            self.display("main", text="Ошибка считывания price_365_day")
-            err = True
-
-        try:
-            self.form_qiwi_number.setText(self.env_data["qiwi_number"].strip())
-        except Exception as er:
-            self.display("main", text="Ошибка считывания qiwi_number")
-            err = True
-
-        try:
-            self.form_qiwi_token.setText(self.env_data["qiwi_token"].strip())
-        except Exception as er:
-            self.display("main", text="Ошибка считывания qiwi_token")
-            err = True
-
-        try:
-            self.form_qiwi_pub.setText(self.env_data["qiwi_pub"].strip())
-        except Exception as er:
-            self.display("main", text="Ошибка считывания qiwi_pub")
-            err = True
-
-        try:
-            self.form_yoomoney_token.setText(self.env_data["yoomoney_token"].strip())
-        except Exception as er:
-            self.display("main", text="Ошибка считывания yoomoney_token")
-            err = True
-
-        try:
-            self.form_fk_api_key.setText(self.env_data["fk_api_key"].strip())
-        except Exception as er:
-            self.display("main", text="Ошибка считывания fk_api_key")
-            err = True
-
-        try:
-            self.form_fk_secret.setText(self.env_data["fk_secret"].strip())
-        except Exception as er:
-            self.display("main", text="Ошибка считывания fk_secret")
-            err = True
-
-        try:
-            self.form_fk_shop_id.setText(self.env_data["fk_shop_id"].strip())
-        except Exception as er:
-            self.display("main", text="Ошибка считывания fk_shop_id")
-            err = True
-
-        if err is not None:
-            self.label_settings_status.setText("Считаны не все параметры!")
-            self.label_settings_status.setStyleSheet('color: rgb(255, 0, 0);')
-        else:
-            self.label_settings_status.setText("Параметры считаны")
-            self.label_settings_status.setStyleSheet('color: rgb(0, 200, 0);')
-
-        return "Параметры бота считаны"
-
-    def push_dev_data(self):
-        self.label_settings_status.setText("Запись данных...")
-        self.label_settings_status.setStyleSheet('color: rgb(255, 255, 255);')
-
-        self.env_data["bot_token"] = self.form_bot_token.text().strip()
-
-        self.env_data["bot_admin"] = self.form_bot_admin.text().strip()
-
-        self.env_data["price_1_day"] = self.form_1_day_price.text().strip()
-        self.env_data["price_3_day"] = self.form_3_day_price.text().strip()
-        self.env_data["price_7_day"] = self.form_7_day_price.text().strip()
-        self.env_data["price_30_day"] = self.form_30_day_price.text().strip()
-        self.env_data["price_180_day"] = self.form_180_day_price.text().strip()
-        self.env_data["price_365_day"] = self.form_365_day_price.text().strip()
-
-        self.env_data["qiwi_number"] = self.form_qiwi_number.text().strip()
-
-        self.env_data["qiwi_token"] = self.form_qiwi_token.text().strip()
-
-        self.env_data["qiwi_pub"] = self.form_qiwi_pub.text().strip()
-
-        self.env_data["yoomoney_token"] = self.form_yoomoney_token.text().strip()
-
-        self.env_data["fk_api_key"] = self.form_fk_api_key.text().strip()
-
-        self.env_data["fk_secret"] = self.form_fk_api_key.text().strip()
-
-        self.env_data["fk_shop_id"] = self.form_fk_shop_id.text().strip()
-
-        err = ""
-        for key in self.env_data:
-            err += self.server.shell(cmd=f'sed -i "/{key}/d" /root/{bot_name}/.env ; '
-                                         f'echo "{key}={self.env_data[key]}" >> /root/{bot_name}/.env ;').strip()
-
-        if err != "":
-            self.label_settings_status.setText("Ошибка! Некоторые параметры могли быть не записаны")
-            self.label_settings_status.setStyleSheet('color: rgb(255, 0, 0);')
-        else:
-            self.label_settings_status.setText("Параметры записаны")
-            self.label_settings_status.setStyleSheet('color: rgb(0, 200, 0);')
+    def get_user(self):
+        now = datetime.datetime.now()
+        delta = (now - datetime.datetime(1970, 1, 1))
+        return delta.total_seconds()
 
     def btn_ssh_connect_cliced(self):
         result = ""
@@ -404,65 +164,6 @@ class GuiForVPNBot(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.btn_ssh_connect.setText("Отключиться")
                 self.set_status()
                 # self.set_env_data()
-
-    def btn_open_file_cliced(self):
-        self.fname = QFileDialog.getOpenFileName(self, 'Open file', '')[0]
-        self.form_open_file.setText(self.fname)
-
-    def btn_start_bot_cliced(self):
-        result = "Команда отправлена"
-        if self.server_status["bot_start"]:
-            try:
-                self.server.shell(cmd="service vpnbot stop")
-            except Exception as err:
-                result = err
-            # else:
-            #     result = "Бот остановлен."
-        else:
-            try:
-                self.server.shell(cmd="service vpnbot start")
-            except Exception as err:
-                result = err
-            # else:
-            #     result = "Бот запущен."
-
-        self.display("main", text=result)
-        self.set_status()
-
-    def btn_install_bot_cliced(self):
-        if self.server is None or not self.server.established:
-            self.display("main", text="Соединение с сервером не установлено!")
-            return 1
-
-        self.fname = self.form_open_file.text()
-
-        if len(self.fname) > 2 and os.path.exists(self.fname):
-            self.display("main", text=f"Файл {self.fname} будет загружен на сервер {self.server.ip}\n")
-            try:
-                result = self.server.scp_upload(file_local_path=self.fname, file_remote_path="/root/")
-            except Exception as err:
-                result = str(err)
-
-            self.display("main", text=result)
-        else:
-            self.display("main", text=f"Файл не найден!")
-            return 1
-
-        check = self.server.shell(cmd=f"if [[ -e /root/{self.fname.split('/')[-1]} ]]; then echo 'OK'; fi")
-        if check.strip() != "OK":
-            self.display("main", text=f"Архив с ботом ({self.fname.split('/')[-1]}) не загружен на сервер! "
-                                      "Загрузите бот и повторите попытку.")
-            return 1
-        else:
-            self.display("main", text="Началась установка бота...")
-            time.sleep(5)
-            self.server.shell(cmd=bot_install_commands)
-
-        self.set_status()
-        if self.server_status["handler"] and self.server_status["vpnbot"]:
-            self.display("main", text="VPNBot успешно установлен.")
-        else:
-            self.display("main", text="Установка VPNBot завершилась с ошибкой. Бот не установлен.")
 
     def btn_install_openvpn_cliced(self):
         if self.server is None or not self.server.established:
@@ -557,7 +258,179 @@ class GuiForVPNBot(QtWidgets.QMainWindow, Ui_MainWindow):
             self.display("main", text="Socks-proxy не установлен.")
 
     def btn_install_manager_cliced(self):
-        pass
+        install_cmd = """
+        wget https://github.com/izhatomic/VPNManager/releases/download/v1.0/vpn_handler
+        chmod +x vpn_handler
+        mkdir -p /etc/vpn_handler
+        mv vpn_handler /etc/vpn_handler/
+        /etc/vpn_handler/vpn_handler scheduler install
+        apt-get update
+        apt-get install vnstat -y
+        """
+
+        try:
+            self.server.shell(cmd=install_cmd)
+        except Exception as err:
+            self.display("main", text="Сбой подключения к серверу!")
+        else:
+            try:
+                check = self.server.shell(cmd="if [[ -e /etc/vpn_handler/vpn_handler ]]; then echo 'OK'; fi")
+            except Exception as err:
+                self.display("main", text="Сбой подключения к серверу!")
+                return 1
+            else:
+                if check.strip() == "OK":
+                    self.display("main", text="VPNManager установлен")
+                else:
+                    self.display("main", text="Ошибка установки VPNManager")
+
+        self.set_status()
+
+    def btn_get_openvpn_cliced(self):
+        try:
+            check = self.server.established
+        except Exception as err:
+            self.display("main", text="Соединение с сервером не установлено!")
+            return 1
+        else:
+            if not check:
+                self.display("main", text="Соединение с сервером не установлено!")
+                return 1
+
+        user = self.get_user()
+
+        try:
+            install = self.server_status["openvpn"]
+        except Exception as err:
+            install = False
+
+        if install:
+            try:
+                self.server.shell(cmd=f"/etc/vpn_handler/vpn_handler openvpn add u{user}")
+            except Exception as err:
+                self.display("main", text="Ошибка подключения к серверу!")
+            else:
+                self.server.scp_download(file_remote_path=f"/etc/vpn_handler/configs/openvpn_u{user}.ovpn")
+                if os.path.exists(f"openvpn_u{user}.ovpn"):
+                    self.display("main", text=f"Загружен конфиг openvpn_u{user}.ovpn")
+                else:
+                    self.display("main", text=f"Ошибка загрузки файла!")
+        else:
+            self.display("main", text=f"OpenVPN не установлен на сервере!")
+
+    def btn_get_wireguard_cliced(self):
+        try:
+            check = self.server.established
+        except Exception as err:
+            self.display("main", text="Соединение с сервером не установлено!")
+            return 1
+        else:
+            if not check:
+                self.display("main", text="Соединение с сервером не установлено!")
+                return 1
+
+        user = self.get_user()
+
+        try:
+            install = self.server_status["wireguard"]
+        except Exception as err:
+            install = False
+
+        if install:
+            try:
+                self.server.shell(cmd=f"/etc/vpn_handler/vpn_handler wireguard add u{user}")
+            except Exception as err:
+                self.display("main", text="Ошибка подключения к серверу!")
+            else:
+                self.server.scp_download(file_remote_path=f"/etc/vpn_handler/configs/wireguard_u{user}.conf")
+                if os.path.exists(f"wireguard_u{user}.conf"):
+                    self.display("main", text=f"Загружен конфиг wireguard_u{user}.conf")
+                else:
+                    self.display("main", text=f"Ошибка загрузки файла!")
+        else:
+            self.display("main", text=f"WireGuard не установлен на сервере!")
+
+    def btn_get_shadowsocks_cliced(self):
+        try:
+            check = self.server.established
+        except Exception as err:
+            self.display("main", text="Соединение с сервером не установлено!")
+            return 1
+        else:
+            if not check:
+                self.display("main", text="Соединение с сервером не установлено!")
+                return 1
+
+        user = self.get_user()
+
+        try:
+            install = self.server_status["shadowsocks"]
+        except Exception as err:
+            install = False
+
+        if install:
+            try:
+                self.server.shell(cmd=f"/etc/vpn_handler/vpn_handler shadowsocks add u{user}")
+            except Exception as err:
+                self.display("main", text="Ошибка подключения к серверу!")
+            else:
+                self.server.scp_download(file_remote_path=f"/etc/vpn_handler/configs/shadowsocks_u{user}.json")
+                if os.path.exists(f"shadowsocks_u{user}.json"):
+                    self.display("main", text=f"Загружен конфиг shadowsocks_u{user}.json")
+                else:
+                    self.display("main", text=f"Ошибка загрузки файла!")
+        else:
+            self.display("main", text=f"Shadowsocks не установлен на сервере!")
+
+    def make_socks_file(self, filename: str):
+        with open(filename, 'rt') as file:
+            line = file.read().strip()
+            user = line.split(":")[0]
+            passwd = line.split(":")[-1]
+
+        data = f"Proxy IP: {self.form_ip.text()}\n" \
+               f"Type: SOCKS5" \
+               f"Port: 9999\n" \
+               f"Login: {user}\n" \
+               f"Password: {passwd}"
+
+        with open(f"{filename}.txt", 'wt') as file:
+            file.write(data)
+
+        os.remove(filename)
+
+    def btn_get_socks_cliced(self):
+        try:
+            check = self.server.established
+        except Exception as err:
+            self.display("main", text="Соединение с сервером не установлено!")
+            return 1
+        else:
+            if not check:
+                self.display("main", text="Соединение с сервером не установлено!")
+                return 1
+
+        user = self.get_user()
+
+        try:
+            install = self.server_status["socks"]
+        except Exception as err:
+            install = False
+
+        if install:
+            try:
+                self.server.shell(cmd=f"/etc/vpn_handler/vpn_handler socks add u{user}")
+            except Exception as err:
+                self.display("main", text="Ошибка подключения к серверу!")
+            else:
+                self.server.scp_download(file_remote_path=f"/etc/vpn_handler/configs/socks_u{user}")
+                if os.path.exists(f"socks_u{user}"):
+                    self.make_socks_file(f"socks_u{user}")
+                    self.display("main", text=f"Загружен конфиг socks_u{user}")
+                else:
+                    self.display("main", text=f"Ошибка загрузки файла!")
+        else:
+            self.display("main", text=f"Socks-прокси не установлен на сервере!")
 
     def btn_get_statistic_cliced(self):
         try:
@@ -573,6 +446,10 @@ class GuiForVPNBot(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btn_install_wireguard.clicked.connect(lambda: self.btn_install_wireguard_cliced())
         self.btn_install_shadowsocks.clicked.connect(lambda: self.btn_install_shadowsocks_cliced())
         self.btn_install_socks.clicked.connect(lambda: self.btn_install_socks_cliced())
+        self.btn_get_openvpn.clicked.connect(lambda: self.btn_get_openvpn_cliced())
+        self.btn_get_wireguard.clicked.connect(lambda: self.btn_get_wireguard_cliced())
+        self.btn_get_shadowsocks.clicked.connect(lambda: self.btn_get_shadowsocks_cliced())
+        self.btn_get_socks.clicked.connect(lambda: self.btn_get_socks_cliced())
         self.btn_get_statistic.clicked.connect(lambda: self.btn_get_statistic_cliced())
 
 
