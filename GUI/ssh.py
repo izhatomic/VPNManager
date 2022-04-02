@@ -62,7 +62,7 @@ class SSH:
             self.ssh.connect(hostname=self.ip, port=self.port, username=self.login, password=self.passwd)
         except Exception as err:
             self.label.setText("Ошибка!")
-            self.label.setStyleSheet('background: rgb(255, 255, 255); color: rgb(255, 0, 0);')
+            self.label.setStyleSheet('color: rgb(255, 0, 0);')
             self.established = False
             return str(err)
 
