@@ -36,7 +36,7 @@ class SSH:
     def label_ssh_on(self):
         if self.label is not None:
             self.label.setText("Соединен")
-            self.label.setStyleSheet('color: rgb(0, 255, 0);')
+            self.label.setStyleSheet('color: rgb(0, 200, 0);')
 
     def label_ssh_off(self):
         if self.label is not None:
