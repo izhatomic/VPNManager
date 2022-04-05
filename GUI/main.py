@@ -390,7 +390,8 @@ class GuiForVPNBot(QtWidgets.QMainWindow, Ui_MainWindow):
 
         data = f"Proxy IP: {self.form_ip.text()}\n" \
                f"Type: SOCKS5" \
-               f"Port: 9999\n" \
+               f"Port SOCKS5: 9999\n" \
+               f"Port HTTPS: 9100\n" \
                f"Login: {user}\n" \
                f"Password: {passwd}"
 
