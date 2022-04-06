@@ -37,7 +37,7 @@ class SSH:
             self.label.setText("Не подключен")
             self.label.setStyleSheet('color: rgb(255, 0, 0);')
 
-    def check_connect(self):
+    def check_connect(self) -> bool:
         if self.ssh is not None:
             try:
                 self.established = self.ssh.get_transport().is_active()
@@ -61,8 +61,6 @@ class SSH:
         try:
             self.ssh.connect(hostname=self.ip, port=self.port, username=self.login, password=self.passwd)
         except Exception as err:
-            self.label.setText("Ошибка!")
-            self.label.setStyleSheet('color: rgb(255, 0, 0);')
             self.established = False
             return str(err)
 
@@ -114,7 +112,6 @@ class SSH:
             text += line
 
         return text
-
 
 
 
