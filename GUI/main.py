@@ -1,21 +1,31 @@
 import asyncio
 import sys
 import os.path
+import threading
 import time
 from typing import Dict
 
 import datetime
 
+from multiprocessing import Process, Queue
+
 import paramiko
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtWidgets import QFileDialog
-from PyQt5 import QtGui
 
 from GUI.VPN_Manager import VPNManager
 from GUI.ssh import SSH
 from m1 import Ui_MainWindow  # Макет программы
 
 bot_name = "VPNBot"
+
+
+class ConnectSSH(QtCore.QObject):
+    msg = QtCore.pyqtSignal(str, str, bool)
+
+    def run(self):
+        result = "TEXT"
+        self.msg.emit("main", result, False)
 
 
 # Создаем класс и наследуем его от макета программы
@@ -98,18 +108,57 @@ class GuiForVPNBot(QtWidgets.QMainWindow, Ui_MainWindow):
             self.label_socks.setText("Не установлен")
             self.label_socks.setStyleSheet('color: rgb(255, 0, 0);')
 
-    def btn_ssh_connect_cliced(self):
+    def print_it(self, q: Queue, temp: VPNManager):
         result = ""
-        if self.vpnmanager.server is not None and self.vpnmanager.server.established:
-            result = asyncio.run(self.vpnmanager.disconnect())
-            self.display("main", text=result)
+        if temp.server is not None and temp.server.established:
+            result = temp.disconnect()
+            display("main", text=result)
         else:
-            result = asyncio.run(self.vpnmanager.connect(ip=self.form_ip.text(), port=self.form_port.text(),
-                                                         login=self.form_login.text(), passwd=self.form_passwd.text()))
-            self.display("main", text=result, clear=True)
+            print("start connecting")
+            result = "result"
+            # result = temp.connect(ip="176.99.11.31", port=22,
+            #                       login="root", passwd="regvpnm")
+            # display("main", text=result, clear=True)
+
+        q.put([temp, result], timeout=10)
+        print("end")
+
+    def btn_ssh_connect_cliced(self):
+        # text = "111"
+        # print(text)
+        # q = Queue()
+        # a = Process(target=self.print_it, args=(text, q))
+        # a.start()
+        # print(q.get())
+        # a.join()
+
+        # result = ""
+        # if self.vpnmanager.server is not None and self.vpnmanager.server.established:
+        #     result = asyncio.run(self.vpnmanager.disconnect())
+        #     self.display("main", text=result)
+        # else:
+        #     result = asyncio.run(self.vpnmanager.connect(ip=self.form_ip.text(), port=self.form_port.text(),
+        #                                                  login=self.form_login.text(), passwd=self.form_passwd.text()))
+        #     self.display("main", text=result, clear=True)
+
+        # self.set_status(data=self.vpnmanager.server_status)
+
+        temp = self.vpnmanager
+
+        q = Queue()
+        p = Process(target=self.print_it, args=(q, temp))
+        p.start()
+        print("start")
+        temp = q.get()
+        print("get")
+        p.join()
+        # print(temp)
+        print("join")
+        self.vpnmanager = temp[0]
+        result = temp[1] + "1"
+        # self.display("main", text=result)
 
         self.set_status(data=self.vpnmanager.server_status)
-        # self.display("main", text=result)
 
     def btn_install_openvpn_cliced(self):
         result, color = asyncio.run(self.vpnmanager.install_service("OpenVPN"))

@@ -23,6 +23,7 @@ class VPNManager:
         self.port: int = 0
         self.login: str = ""
         self.passwd: str = ""
+        self.var: int = 1
 
     def get_user(self):
         now = datetime.datetime.now()
@@ -47,7 +48,7 @@ class VPNManager:
 
         os.remove(filename)
 
-    async def get_server_status(self):
+    def get_server_status(self):
         if self.server is not None:
             self.server_status.connected = self.server.check_connect()
         else:
@@ -88,7 +89,7 @@ class VPNManager:
 
         return self.server_status
 
-    async def connect(self, ip: str = "", port: int = 0, login: str = "", passwd: str = "") -> str:
+    def connect(self, ip: str = "", port: int = 0, login: str = "", passwd: str = "") -> str:
         if ip != "":
             self.ip = ip
 
@@ -111,7 +112,7 @@ class VPNManager:
                 result = err
                 self.server.established = False
 
-            await self.get_server_status()
+            self.get_server_status()
 
         return result
 
