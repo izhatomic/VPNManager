@@ -134,13 +134,14 @@ class VPNManager:
             return result, color
 
         install_cmd = """
-        wget https://github.com/izhatomic/VPNManager/releases/download/v1.0/vpn_handler
+        wget https://github.com/izhatomic/VPNManager/releases/download/v1.1/vpn_handler
         chmod +x vpn_handler
         mkdir -p /etc/vpn_handler
         mv vpn_handler /etc/vpn_handler/
         /etc/vpn_handler/vpn_handler scheduler install
         apt-get update
         apt-get install vnstat -y
+        apt-get install qrencode -y
         """
 
         try:
@@ -232,10 +233,21 @@ class VPNManager:
                 color = 'color: rgb(255, 0, 0);'
                 return result, color
             else:
+                if service.lower() == "wireguard":
+                    service = "wg"
                 self.server.scp_download(file_remote_path=f"/etc/vpn_handler/configs/{service.lower()}_u{user}{ext}")
                 if service.lower() == "socks":
                     self.make_socks_file(filename=f"{service.lower()}_u{user}{ext}")
                     ext = ".txt"
+                elif service.lower() == "wg":
+                    try:
+                        self.server.shell(cmd=f"qrencode -t png -o /tmp/QR-{user}.png -r /etc/vpn_handler/configs/{service.lower()}_u{user}{ext}")
+                    except Exception as err:
+                        pass
+                    else:
+                        self.server.scp_download(file_remote_path=f"/tmp/QR-{user}.png")
+                else:
+                    pass
 
                 if os.path.exists(f"{service.lower()}_u{user}{ext}"):
                     result = f"Загружен конфиг {service.lower()}_u{user}{ext}"
