@@ -27,7 +27,7 @@ class VPNManager:
     def get_user(self):
         now = datetime.datetime.now()
         delta = (now - datetime.datetime(1970, 1, 1))
-        return delta.total_seconds()
+        return f"{str(delta.total_seconds()).split('.')[0]}{str(delta.microseconds)[0]}"
 
     def make_socks_file(self, filename: str):
         with open(filename, 'rt') as file:
