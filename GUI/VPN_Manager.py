@@ -130,8 +130,7 @@ class VPNManager:
     async def install_manager(self):
         if self.server is None or not self.server.established:
             result = "Соединение с сервером не установлено!"
-            color = 'color: rgb(255, 0, 0);'
-            return result, color
+            return result
 
         install_cmd = """
         wget https://github.com/izhatomic/VPNManager/releases/download/v1.1/vpn_handler
